@@ -1,0 +1,18 @@
+apply plugin: 'java'
+task run(type: JavaExec) {
+    classpath sourceSets.main.runtimeClasspath
+    main = "NQueens"
+    args "arg1", "arg2"
+}
+sourceSets {
+    main {
+        java {
+            srcDir 'src'
+        }
+    }
+    test {
+        java {
+            srcDir 'test'
+        }
+    }
+}
