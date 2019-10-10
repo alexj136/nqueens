@@ -10,12 +10,12 @@ public class NQueens {
         System.out.println("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
         System.out.println("=-=-=-=-= YAY IT COMPILES =-=-=-=-=");
         System.out.println("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
-        boardSearch(5);
+        boardSearch(7);
     }
 
     public static void boardSearch(int nQueens) {
         ArrayList<Board> toExplore = new ArrayList<>();
-        ArrayList<Board> solutions = new ArrayList<>();
+        HashSet<Board> solutions = new HashSet<>();
         HashSet<Board> seen = new HashSet<>();
         toExplore.add(Board.empty(nQueens));
         while(toExplore.size() > 0) {
@@ -23,7 +23,6 @@ public class NQueens {
             seen.add(current);
             if(current.placedQueens() >= nQueens) {
                 solutions.add(current);
-                System.out.println(current);
             }
             for(int i = 0; i < Math.pow(current.nQueens, 2); i++) {
                 if(current.occupied(i)) {}
@@ -34,17 +33,18 @@ public class NQueens {
                 }
             }
         }
+        for(Board solution : solutions) System.out.println(solution);
     }
 }
 
 class Board {
 
     private BitSet bits;
-    private ArrayList<Pair<Integer, Integer>> queenCoords;
+    private HashSet<Pair<Integer, Integer>> queenCoords;
     public final int nQueens;
 
     private Board(int nQueens, BitSet bits,
-            ArrayList<Pair<Integer, Integer>> queenCoords) {
+            HashSet<Pair<Integer, Integer>> queenCoords) {
         this.queenCoords = queenCoords;
         this.nQueens = nQueens;
         this.bits = bits;
@@ -52,7 +52,7 @@ class Board {
 
     public static Board empty(int nQueens) {
         return new Board(nQueens, new BitSet(nQueens * nQueens),
-                new ArrayList<>());
+                new HashSet<>());
     }
 
     @Override
@@ -62,8 +62,8 @@ class Board {
         for(int rw = 0; rw < nQueens; rw++) {
             for(int cl = 0; cl < nQueens; cl++) {
                 sb.append(queenCoords.contains(Pair.of(rw, cl)) ?
-                        (white?'◯':'◙'):
-                        (white?' ':'█'));
+                        (white?"◙█":"◯ "):
+                        (white?"██":"  "));
                 white = !white;
             }
             if(nQueens % 2 == 0) white = !white;
@@ -74,13 +74,19 @@ class Board {
 
     public Board clone() {
         return new Board(nQueens, (BitSet) bits.clone(),
-                (ArrayList<Pair<Integer, Integer>>) queenCoords.clone());
+                (HashSet<Pair<Integer, Integer>>) queenCoords.clone());
+    }
+
+    @Override
+    public int hashCode() {
+        return queenCoords.hashCode();
     }
 
     @Override
     public boolean equals(Object obj) {
         if(obj == null || obj instanceof Board) {
             Board other = (Board) obj;
+            boolean different = false;
             return other.nQueens == nQueens &&
                 other.queenCoords.equals(queenCoords);
         }
