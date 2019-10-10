@@ -9,9 +9,10 @@ public class NQueens {
         System.out.println("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
         System.out.println("-=-=-=-=- YAY IT COMPILES -=-=-=-=-");
         System.out.println("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
+        boardSearch(4);
     }
 
-    public static Optional<Board> boardSearch(int nQueens) {
+    public static void boardSearch(int nQueens) {
         ArrayList<Board> toExplore = new ArrayList<>();
         ArrayList<Board> solutions = new ArrayList<>();
         toExplore.add(Board.empty(nQueens));
@@ -19,13 +20,17 @@ public class NQueens {
             Board current = toExplore.remove(0);
             if(current.placedQueens() >= nQueens) {
                 solutions.add(current);
+                System.out.println(current);
             }
-            current.openCell().ifPresent(coord -> {
-                
-            });
-        } while(toExplore.size() > 1);
-        return toExplore.isEmpty() ?
-            Optional.empty() : Optional.of(toExplore.get(0));
+            for(int i = 0; i < Math.pow(current.nQueens, 2); i++) {
+                if(current.occupied(i)) {}
+                else {
+                    Board daughter = current.clone();
+                    daughter.placeQueen(i);
+                    toExplore.add(daughter);
+                }
+            }
+        } while(toExplore.size() > 0);
     }
 }
 
@@ -35,13 +40,16 @@ class Board {
     private ArrayList<Pair<Integer, Integer>> queenCoords;
     public final int nQueens;
 
-    private Board(int nQueens, BitSet bits) {
+    private Board(int nQueens, BitSet bits,
+            ArrayList<Pair<Integer, Integer>> queenCoords) {
+        this.queenCoords = queenCoords;
         this.nQueens = nQueens;
         this.bits = bits;
     }
 
     public static Board empty(int nQueens) {
-        return new Board(nQueens, new BitSet(nQueens * nQueens));
+        return new Board(nQueens, new BitSet(nQueens * nQueens),
+                new ArrayList<>());
     }
 
     @Override
@@ -56,7 +64,8 @@ class Board {
     }
 
     public Board clone() {
-        return new Board(nQueens, (BitSet) bits.clone());
+        return new Board(nQueens, (BitSet) bits.clone(),
+                (ArrayList<Pair<Integer, Integer>>) queenCoords.clone());
     }
 
     public int placedQueens() {
@@ -75,12 +84,20 @@ class Board {
         return bits.get(coordToLinearIndex(coord));
     }
 
+    public boolean occupied(int bitIndex) {
+        return bits.get(bitIndex);
+    }
+
     public void setOccupied(Pair<Integer, Integer> coord) {
         bits.set(coordToLinearIndex(coord));
     }
 
     public void setOccupied(int row, int column) {
         bits.set(coordToLinearIndex(Pair.of(row, column)));
+    }
+
+    public void placeQueen(int bitIndex) {
+        placeQueen(linearIndexToCoord(bitIndex));
     }
 
     public void placeQueen(Pair<Integer, Integer> coord) {
