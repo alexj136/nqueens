@@ -6,37 +6,33 @@ import org.apache.commons.lang3.tuple.Pair;
 
 public class NQueens {
 
+    public static HashSet<Board> solutions = new HashSet<>();
+
     public static void main (String[] args) {
         System.out.println("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
         System.out.println("=-=-=-=-= YAY IT COMPILES =-=-=-=-=");
         System.out.println("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
-        /*HashSet<Board> solutions =*/ boardSearch(8);
-        //if(solutions.isEmpty()) System.out.println("No solutions found.");
-        //else for(Board solution : solutions) System.out.println(solution);
+        boardSearch(10);
+        if(solutions.isEmpty()) System.out.println("No solutions found.");
+        else for(Board solution : solutions) System.out.println(solution);
     }
 
-    public static HashSet<Board> boardSearch(int nQueens) {
-        ArrayList<BoardBuilder> toExplore = new ArrayList<>();
-        HashSet<Board> solutions = new HashSet<>();
-        HashSet<Board> seen = new HashSet<>();
-        toExplore.add(BoardBuilder.empty(nQueens));
-        while(toExplore.size() > 0) {
-            BoardBuilder current = toExplore.remove(0);
-            seen.add(current.board());
-            if(current.numPlacedQueens() >= nQueens) {
-                if(solutions.add(current.board())) System.out.println(current);
-            }
-            for(int i = 0; i < Math.pow(current.nQueens, 2); i++) {
-                if(!current.threatened(i)) {
-                    BoardBuilder daughter = current.clone();
-                    daughter.placeQueen(i);
-                    if(!seen.contains(daughter.board())) {
-                        toExplore.add(daughter);
-                    }
-                }
+    public static void boardSearch(int nQueens) {
+        BoardBuilder toExplore = BoardBuilder.empty(nQueens);
+        explore(0, nQueens, toExplore);
+    }
+
+    public static void explore(int row, int nQueens, BoardBuilder board) {
+        if(row >= nQueens) {
+            solutions.add(board.board());
+        }
+        else for(int column = 0; column < nQueens; column++) {
+            if(!board.threatened(Pair.of(row, column))) {
+                BoardBuilder daughter = board.clone();
+                daughter.placeQueen(Pair.of(row, column));
+                explore(row + 1, nQueens, daughter);
             }
         }
-        return solutions;
     }
 }
 
@@ -44,9 +40,6 @@ class Board {
 
     public final int nQueens;
     public HashSet<Pair<Integer, Integer>> queenCoords;
-    protected Optional<Integer> hashCode = Optional.empty();
-    protected Optional<HashSet<Pair<Integer, Integer>>> minHashCodePerm =
-        Optional.empty();
 
     public Board(int nQueens, HashSet<Pair<Integer, Integer>> queenCoords) {
         this.queenCoords = queenCoords;
@@ -58,8 +51,6 @@ class Board {
             Optional<HashSet<Pair<Integer, Integer>>> minHashCodePerm) {
         this.queenCoords = queenCoords;
         this.nQueens = nQueens;
-        this.hashCode = hashCode;
-        this.minHashCodePerm = minHashCodePerm;
     }
 
     public int numPlacedQueens() {
@@ -87,40 +78,14 @@ class Board {
     public boolean equals(Object obj) {
         if(obj != null && obj instanceof Board) {
             Board other = (Board) obj;
-            computeHashCodeAndMinPerm();
-            other.computeHashCodeAndMinPerm();
-            return minHashCodePerm.get().equals(other.minHashCodePerm.get());
+            return queenCoords.equals(other.queenCoords);
         }
         else return false;
     }
 
     @Override
     public int hashCode() {
-        computeHashCodeAndMinPerm();
-        return hashCode.get();
-    }
-
-    private void computeHashCodeAndMinPerm() {
-        if(hashCode.isPresent()) return;
-        Board board = this;
-        Board[] boards = new Board[8];
-        for(int i = 0; i < 4; i++) {
-            boards[2 * i] = board;
-            boards[(2 * i) + 1] = board.mirror();
-            board = board.rotate();
-        }
-        int minHashCode = boards[0].queenCoords.hashCode();
-        int minHashCodeIdx = 0;
-        for(int i = 1; i < 8; i++) {
-            int nextHashCode = boards[i].queenCoords.hashCode();
-            if(nextHashCode < minHashCode) {
-                minHashCode = nextHashCode;
-                minHashCodeIdx = i;
-            }
-        }
-        hashCode = Optional.of(minHashCode);
-        minHashCodePerm = Optional.of(boards[minHashCodeIdx].queenCoords);
-        return;
+        return queenCoords.hashCode();
     }
 
     public Board rotate() {
@@ -141,6 +106,17 @@ class Board {
         return new Board(nQueens, newCoords);
     }
 
+    public ArrayList<Board> permutations() {
+        ArrayList<Board> perms = new ArrayList<>();
+        Board b = this;
+        for(int i = 0; i < 4; i++) {
+            perms.add(b);
+            perms.add(b.mirror());
+            b = b.rotate();
+        }
+        return perms;
+    }
+
     protected int coordToLinearIndex(Pair<Integer, Integer> coord) {
         return coord.getLeft() * nQueens + coord.getRight();
     }
@@ -155,7 +131,7 @@ class BoardBuilder extends Board {
     private BitSet bits;
 
     public Board board() {
-        return new Board(nQueens, queenCoords, hashCode, minHashCodePerm);
+        return new Board(nQueens, queenCoords);
     }
 
     private BoardBuilder(int nQueens, BitSet bits,
@@ -208,6 +184,16 @@ class BoardBuilder extends Board {
         bits.set(coordToLinearIndex(Pair.of(row, column)));
     }
 
+    public Optional<Integer> nonthreatenedColumnInRow(int row) {
+        int clearBit = bits.nextClearBit(coordToLinearIndex(Pair.of(row, 0)));
+        if(clearBit < 0) return Optional.empty();
+        Pair<Integer, Integer> clearCoord = linearIndexToCoord(clearBit);
+        if(clearCoord.getLeft() == row) {
+            return Optional.of(clearCoord.getRight());
+        }
+        else return Optional.empty();
+    }
+
     public void placeQueen(int bitIndex) {
         placeQueen(linearIndexToCoord(bitIndex));
     }
@@ -220,8 +206,6 @@ class BoardBuilder extends Board {
         else {
             setPlaceableBits(coord);
             queenCoords.add(coord);
-            hashCode = Optional.empty();
-            minHashCodePerm = Optional.empty();
         }
     }
 
