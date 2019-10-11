@@ -10,49 +10,46 @@ public class NQueens {
         System.out.println("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
         System.out.println("=-=-=-=-= YAY IT COMPILES =-=-=-=-=");
         System.out.println("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
-        boardSearch(7);
+        HashSet<Board> solutions = boardSearch(6);
+        if(solutions.isEmpty()) System.out.println("No solutions found.");
+        else for(Board solution : solutions) System.out.println(solution);
     }
 
-    public static void boardSearch(int nQueens) {
-        ArrayList<Board> toExplore = new ArrayList<>();
+    public static HashSet<Board> boardSearch(int nQueens) {
+        ArrayList<BoardBuilder> toExplore = new ArrayList<>();
         HashSet<Board> solutions = new HashSet<>();
         HashSet<Board> seen = new HashSet<>();
-        toExplore.add(Board.empty(nQueens));
+        toExplore.add(BoardBuilder.empty(nQueens));
         while(toExplore.size() > 0) {
-            Board current = toExplore.remove(0);
-            seen.add(current);
-            if(current.placedQueens() >= nQueens) {
-                solutions.add(current);
+            BoardBuilder current = toExplore.remove(0);
+            seen.add(current.board());
+            if(current.numPlacedQueens() >= nQueens) {
+                solutions.add(current.board());
             }
             for(int i = 0; i < Math.pow(current.nQueens, 2); i++) {
-                if(current.occupied(i)) {}
-                else {
-                    Board daughter = current.clone();
+                if(!current.occupied(i)) {
+                    BoardBuilder daughter = current.clone();
                     daughter.placeQueen(i);
                     if(!seen.contains(daughter)) toExplore.add(daughter);
                 }
             }
         }
-        for(Board solution : solutions) System.out.println(solution);
+        return solutions;
     }
 }
 
 class Board {
 
-    private BitSet bits;
-    private HashSet<Pair<Integer, Integer>> queenCoords;
     public final int nQueens;
+    public HashSet<Pair<Integer, Integer>> queenCoords;
 
-    private Board(int nQueens, BitSet bits,
-            HashSet<Pair<Integer, Integer>> queenCoords) {
+    public Board(int nQueens, HashSet<Pair<Integer, Integer>> queenCoords) {
         this.queenCoords = queenCoords;
         this.nQueens = nQueens;
-        this.bits = bits;
     }
 
-    public static Board empty(int nQueens) {
-        return new Board(nQueens, new BitSet(nQueens * nQueens),
-                new HashSet<>());
+    public int numPlacedQueens() {
+        return queenCoords.size();
     }
 
     @Override
@@ -72,37 +69,91 @@ class Board {
         return sb.toString();
     }
 
-    public Board clone() {
-        return new Board(nQueens, (BitSet) bits.clone(),
-                (HashSet<Pair<Integer, Integer>>) queenCoords.clone());
-    }
-
-    @Override
-    public int hashCode() {
-        return queenCoords.hashCode();
-    }
-
     @Override
     public boolean equals(Object obj) {
         if(obj == null || obj instanceof Board) {
             Board other = (Board) obj;
-            boolean different = false;
-            return other.nQueens == nQueens &&
-                other.queenCoords.equals(queenCoords);
+            Board _90 = rotate();
+            Board _180 = _90.rotate();
+            Board _270 = _180.rotate();
+            return other.nQueens == nQueens && (
+                    other.queenCoords.equals(queenCoords) ||
+                    other.queenCoords.equals(mirror().queenCoords) ||
+                    other.queenCoords.equals(_90.queenCoords) ||
+                    other.queenCoords.equals(_90.mirror().queenCoords) ||
+                    other.queenCoords.equals(_180.queenCoords) ||
+                    other.queenCoords.equals(_180.mirror().queenCoords) ||
+                    other.queenCoords.equals(_270.queenCoords) ||
+                    other.queenCoords.equals(_270.mirror().queenCoords));
         }
         else return false;
     }
 
-    public int placedQueens() {
-        return queenCoords.size();
+    @Override
+    public int hashCode() {
+        Board board = this;
+        int[] codes = new int[8];
+        for(int i = 0; i < 4; i++) {
+            codes[2 * i] = board.queenCoords.hashCode();
+            codes[(2 * i) + 1] = board.mirror().queenCoords.hashCode();
+            board = board.rotate();
+        }
+        int minCode = codes[0];
+        for(int i = 1; i < 8; i++) {
+            if(codes[i] < minCode) minCode = codes[i];
+        }
+        return minCode;
     }
 
-    private int coordToLinearIndex(Pair<Integer, Integer> coord) {
+    public Board rotate() {
+        HashSet<Pair<Integer, Integer>> newCoords = new HashSet<>();
+        for(Pair<Integer, Integer> coord : queenCoords) {
+            newCoords.add(Pair.of(
+                    nQueens - coord.getRight() - 1, coord.getLeft()));
+        }
+        return new Board(nQueens, newCoords);
+    }
+
+    public Board mirror() {
+        HashSet<Pair<Integer, Integer>> newCoords = new HashSet<>();
+        for(Pair<Integer, Integer> coord : queenCoords) {
+            newCoords.add(Pair.of(
+                    nQueens - coord.getLeft() - 1, coord.getRight()));
+        }
+        return new Board(nQueens, newCoords);
+    }
+
+    protected int coordToLinearIndex(Pair<Integer, Integer> coord) {
         return coord.getLeft() * nQueens + coord.getRight();
     }
 
-    private Pair<Integer, Integer> linearIndexToCoord(int linearIndex) {
+    protected Pair<Integer, Integer> linearIndexToCoord(int linearIndex) {
         return Pair.of(linearIndex / nQueens, linearIndex % nQueens);
+    }
+}
+
+class BoardBuilder extends Board {
+
+    private BitSet bits;
+
+    public Board board() {
+        return new Board(nQueens, queenCoords);
+    }
+
+    private BoardBuilder(int nQueens, BitSet bits,
+            HashSet<Pair<Integer, Integer>> queenCoords) {
+        super(nQueens, queenCoords);
+        this.bits = bits;
+    }
+
+    public static BoardBuilder empty(int nQueens) {
+        return new BoardBuilder(nQueens, new BitSet(nQueens * nQueens),
+                new HashSet<>());
+    }
+
+    public BoardBuilder clone() {
+        return new BoardBuilder(nQueens, (BitSet) bits.clone(),
+                (HashSet<Pair<Integer, Integer>>) queenCoords.clone());
     }
 
     public boolean occupied(Pair<Integer, Integer> coord) {
