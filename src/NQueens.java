@@ -2,6 +2,7 @@ import java.util.BitSet;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Optional;
+import java.math.BigInteger;
 import org.apache.commons.lang3.tuple.Pair;
 
 public class NQueens {
@@ -12,7 +13,7 @@ public class NQueens {
         System.out.println("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
         System.out.println("=-=-=-=-= YAY IT COMPILES =-=-=-=-=");
         System.out.println("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
-        boardSearch(10);
+        boardSearch(8);
         if(solutions.isEmpty()) System.out.println("No solutions found.");
         else for(Board solution : solutions) System.out.println(solution);
     }
@@ -239,10 +240,45 @@ class BoardBuilder extends Board {
         for(int rw = row + 1, cl = column - 1;
                 rw < nQueens && cl >= 0; rw++, cl--) setThreatened(rw, cl);
 
-        /*for(Pair<Integer, Integer> coord : queenCoords) {
-            int rw = coord.getLeft(), cl = coord.getRight();
+        for(Pair<Integer, Integer> otherCoord : queenCoords) {
+            Pair<Integer, Integer> unitDiff =
+                simplifyFraction(coordSubtract(coord, otherCoord));
+            Pair<Integer, Integer> coordToSet = coordSubtract(coord, unitDiff);
+            while(inBounds(coordToSet)) {
+                setThreatened(coordToSet);
+                coordToSet = coordSubtract(coordToSet, unitDiff);
+            }
+            coordToSet = coordAdd(coord, unitDiff);
+            while(inBounds(coordToSet)) {
+                setThreatened(coordToSet);
+                coordToSet = coordAdd(coordToSet, unitDiff);
+            }
         }
+    }
 
-        throw new RuntimeException("Not yet implemented");*/
+    public static Pair<Integer, Integer> simplifyFraction(
+            Pair<Integer, Integer> fraction) {
+        int gcd = coordGCD(fraction);
+        return Pair.of(fraction.getLeft() / gcd, fraction.getRight() / gcd);
+    }
+
+    public static Pair<Integer, Integer> coordSubtract(
+            Pair<Integer, Integer> a, Pair<Integer, Integer> b) {
+        return Pair.of(a.getLeft() - b.getLeft(), a.getRight() - b.getRight());
+    }
+
+    public static Pair<Integer, Integer> coordAdd(
+            Pair<Integer, Integer> a, Pair<Integer, Integer> b) {
+        return Pair.of(a.getLeft() + b.getLeft(), a.getRight() + b.getRight());
+    }
+
+    public static int coordGCD(Pair<Integer, Integer> coord) {
+        return BigInteger.valueOf(coord.getLeft())
+            .gcd(BigInteger.valueOf(coord.getRight())).intValue();
+    }
+
+    public boolean inBounds(Pair<Integer, Integer> coord) {
+        int row = coord.getLeft(), column = coord.getRight();
+        return row >= 0 && column >= 0 && row < nQueens && column < nQueens;
     }
 }
