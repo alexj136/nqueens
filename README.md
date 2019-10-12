@@ -18,3 +18,13 @@ An implementation of a variant of the N-Queens problem
         └───┴───┴───┴───┴───┘
 
   since each Q lies on a straight line.
+
+# Instructions
+Run using Gradle, e.g. for `n == 8`:
+
+    gradle run --args='8'
+
+In case it's useful to know, my rusty laptop takes about 9 seconds to find all
+solutions for `n == 14` and about 45 seconds for `n == 15`. If you have good
+hardware you might get to `n == 18` or `19` if you're willing to go for a coffee
+break while it runs.
