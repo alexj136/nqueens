@@ -14,18 +14,29 @@ import org.apache.commons.lang3.tuple.Pair;
  */
 public class NQueens {
 
-    public static Set<Board> solutions = new HashSet<>();
-
     public static void main (String[] args) {
         int nQueens = Integer.parseInt(args[0]);
-        boardSearch(nQueens);
-        for(Board solution : solutions) System.out.println(solution);
-        System.out.println(solutions.size() + " solutions found.");
+        NQueens nq = new NQueens(nQueens);
+        nq.boardSearch();
+        for(Board solution : nq.getSolutions()) System.out.println(solution);
+        System.out.println(nq.getSolutions().size() + " solutions found.");
     }
 
-    public static void boardSearch(int nQueens) {
+    private Set<Board> solutions;
+    private int nQueens;
+
+    public NQueens(int nQueens) {
+        this.nQueens = nQueens;
+        solutions = new HashSet<>();
+    }
+
+    public Set<Board> getSolutions() {
+        return solutions;
+    }
+
+    public void boardSearch() {
         BoardBuilder toExplore = BoardBuilder.empty(nQueens);
-        explore(0, nQueens, toExplore);
+        explore(0, toExplore);
     }
 
     /* We use recursive backtracking to find solutions. We try to place a queen
@@ -36,7 +47,7 @@ public class NQueens {
      * solutions, assuming we haven't seen it or any of its permutations
      * (rotations or reflections) already.
      */
-    public static void explore(int row, int nQueens, BoardBuilder board) {
+    public void explore(int row, BoardBuilder board) {
         if(row >= nQueens) {
             List<Board> perms = board.permutations();
             perms.removeAll(solutions);
@@ -46,7 +57,7 @@ public class NQueens {
             if(!board.threatened(new Coord(row, column))) {
                 BoardBuilder daughter = board.clone();
                 daughter.placeQueen(new Coord(row, column));
-                explore(row + 1, nQueens, daughter);
+                explore(row + 1, daughter);
             }
         }
     }
