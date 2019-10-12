@@ -1,13 +1,15 @@
 import java.util.BitSet;
+import java.util.List;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import java.math.BigInteger;
 import org.apache.commons.lang3.tuple.Pair;
 
 public class NQueens {
 
-    public static HashSet<Board> solutions = new HashSet<>();
+    public static BoardSet solutions = new BoardSet();
 
     public static void main (String[] args) {
         System.out.println("-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-");
@@ -28,9 +30,9 @@ public class NQueens {
             solutions.add(board.board());
         }
         else for(int column = 0; column < nQueens; column++) {
-            if(!board.threatened(Pair.of(row, column))) {
+            if(!board.threatened(new Coord(row, column))) {
                 BoardBuilder daughter = board.clone();
-                daughter.placeQueen(Pair.of(row, column));
+                daughter.placeQueen(new Coord(row, column));
                 explore(row + 1, nQueens, daughter);
             }
         }
@@ -40,16 +42,16 @@ public class NQueens {
 class Board {
 
     public final int nQueens;
-    public HashSet<Pair<Integer, Integer>> queenCoords;
+    public HashSet<Coord> queenCoords;
 
-    public Board(int nQueens, HashSet<Pair<Integer, Integer>> queenCoords) {
+    public Board(int nQueens, HashSet<Coord> queenCoords) {
         this.queenCoords = queenCoords;
         this.nQueens = nQueens;
     }
 
-    public Board(int nQueens, HashSet<Pair<Integer, Integer>> queenCoords,
+    public Board(int nQueens, HashSet<Coord> queenCoords,
             Optional<Integer> hashCode,
-            Optional<HashSet<Pair<Integer, Integer>>> minHashCodePerm) {
+            Optional<HashSet<Coord>> minHashCodePerm) {
         this.queenCoords = queenCoords;
         this.nQueens = nQueens;
     }
@@ -64,7 +66,7 @@ class Board {
         boolean white = false;
         for(int rw = 0; rw < nQueens; rw++) {
             for(int cl = 0; cl < nQueens; cl++) {
-                sb.append(queenCoords.contains(Pair.of(rw, cl)) ?
+                sb.append(queenCoords.contains(new Coord(rw, cl)) ?
                         (white?"◙█":"◯ "):
                         (white?"██":"  "));
                 white = !white;
@@ -90,21 +92,15 @@ class Board {
     }
 
     public Board rotate() {
-        HashSet<Pair<Integer, Integer>> newCoords = new HashSet<>();
-        for(Pair<Integer, Integer> coord : queenCoords) {
-            newCoords.add(Pair.of(
-                    nQueens - coord.getRight() - 1, coord.getLeft()));
-        }
-        return new Board(nQueens, newCoords);
+        return new Board(nQueens, new HashSet(queenCoords.stream()
+            .map(coord -> new Coord(nQueens - coord.column - 1, coord.row))
+            .collect(Collectors.toSet())));
     }
 
     public Board mirror() {
-        HashSet<Pair<Integer, Integer>> newCoords = new HashSet<>();
-        for(Pair<Integer, Integer> coord : queenCoords) {
-            newCoords.add(Pair.of(
-                    nQueens - coord.getLeft() - 1, coord.getRight()));
-        }
-        return new Board(nQueens, newCoords);
+        return new Board(nQueens, new HashSet(queenCoords.stream()
+            .map(coord -> new Coord(nQueens - coord.row - 1, coord.column))
+            .collect(Collectors.toSet())));
     }
 
     public ArrayList<Board> permutations() {
@@ -118,12 +114,12 @@ class Board {
         return perms;
     }
 
-    protected int coordToLinearIndex(Pair<Integer, Integer> coord) {
-        return coord.getLeft() * nQueens + coord.getRight();
+    protected int coordToLinearIndex(Coord coord) {
+        return coord.row * nQueens + coord.column;
     }
 
-    protected Pair<Integer, Integer> linearIndexToCoord(int linearIndex) {
-        return Pair.of(linearIndex / nQueens, linearIndex % nQueens);
+    protected Coord linearIndexToCoord(int linearIndex) {
+        return new Coord(linearIndex / nQueens, linearIndex % nQueens);
     }
 }
 
@@ -136,7 +132,7 @@ class BoardBuilder extends Board {
     }
 
     private BoardBuilder(int nQueens, BitSet bits,
-            HashSet<Pair<Integer, Integer>> queenCoords) {
+            HashSet<Coord> queenCoords) {
         super(nQueens, queenCoords);
         this.bits = bits;
     }
@@ -148,7 +144,7 @@ class BoardBuilder extends Board {
 
     public BoardBuilder clone() {
         return new BoardBuilder(nQueens, (BitSet) bits.clone(),
-                (HashSet<Pair<Integer, Integer>>) queenCoords.clone());
+                (HashSet<Coord>) queenCoords.clone());
     }
 
     @Override
@@ -157,9 +153,9 @@ class BoardBuilder extends Board {
         boolean white = false;
         for(int rw = 0; rw < nQueens; rw++) {
             for(int cl = 0; cl < nQueens; cl++) {
-                sb.append(queenCoords.contains(Pair.of(rw, cl)) ?
+                sb.append(queenCoords.contains(new Coord(rw, cl)) ?
                         (white ? "◙█" : "◯ ") :
-                        (threatened(Pair.of(rw, cl)) ? (white ? "▓▓" : "░░") :
+                        (threatened(new Coord(rw, cl)) ? (white ? "▓▓" : "░░") :
                         (white ? "██" : "  ")));
                 white = !white;
             }
@@ -169,7 +165,7 @@ class BoardBuilder extends Board {
         return sb.toString();
     }
 
-    public boolean threatened(Pair<Integer, Integer> coord) {
+    public boolean threatened(Coord coord) {
         return bits.get(coordToLinearIndex(coord));
     }
 
@@ -177,20 +173,20 @@ class BoardBuilder extends Board {
         return bits.get(bitIndex);
     }
 
-    public void setThreatened(Pair<Integer, Integer> coord) {
+    public void setThreatened(Coord coord) {
         bits.set(coordToLinearIndex(coord));
     }
 
     public void setThreatened(int row, int column) {
-        bits.set(coordToLinearIndex(Pair.of(row, column)));
+        bits.set(coordToLinearIndex(new Coord(row, column)));
     }
 
     public Optional<Integer> nonthreatenedColumnInRow(int row) {
-        int clearBit = bits.nextClearBit(coordToLinearIndex(Pair.of(row, 0)));
+        int clearBit = bits.nextClearBit(coordToLinearIndex(new Coord(row, 0)));
         if(clearBit < 0) return Optional.empty();
-        Pair<Integer, Integer> clearCoord = linearIndexToCoord(clearBit);
-        if(clearCoord.getLeft() == row) {
-            return Optional.of(clearCoord.getRight());
+        Coord clearCoord = linearIndexToCoord(clearBit);
+        if(clearCoord.row == row) {
+            return Optional.of(clearCoord.column);
         }
         else return Optional.empty();
     }
@@ -199,7 +195,7 @@ class BoardBuilder extends Board {
         placeQueen(linearIndexToCoord(bitIndex));
     }
 
-    public void placeQueen(Pair<Integer, Integer> coord) {
+    public void placeQueen(Coord coord) {
         if(threatened(coord)) {
             throw new RuntimeException(
                 "Tried to place queen in spot marked as illegal");
@@ -210,15 +206,15 @@ class BoardBuilder extends Board {
         }
     }
 
-    public Optional<Pair<Integer, Integer>> openCell() {
+    public Optional<Coord> openCell() {
         int clearBit = bits.nextClearBit(0);
         if (clearBit < 0) return Optional.empty();
         else return Optional.of(linearIndexToCoord(clearBit));
     }
 
-    public void setPlaceableBits(Pair<Integer, Integer> coord) {
+    public void setPlaceableBits(Coord coord) {
         setThreatened(coord);
-        int row = coord.getLeft(), column = coord.getRight();
+        int row = coord.row, column = coord.column;
 
         // Vertical
         for(int rw = 0; rw < row; rw++) setThreatened(rw, column);
@@ -240,45 +236,82 @@ class BoardBuilder extends Board {
         for(int rw = row + 1, cl = column - 1;
                 rw < nQueens && cl >= 0; rw++, cl--) setThreatened(rw, cl);
 
-        for(Pair<Integer, Integer> otherCoord : queenCoords) {
-            Pair<Integer, Integer> unitDiff =
-                simplifyFraction(coordSubtract(coord, otherCoord));
-            Pair<Integer, Integer> coordToSet = coordSubtract(coord, unitDiff);
-            while(inBounds(coordToSet)) {
+        for(Coord otherCoord : queenCoords) {
+            Coord unitDiff = coord.minus(otherCoord).simplifyAsFraction();
+            Coord coordToSet = coord.minus(unitDiff);
+            while(coordToSet.inBounds(this)) {
                 setThreatened(coordToSet);
-                coordToSet = coordSubtract(coordToSet, unitDiff);
+                coordToSet = coordToSet.minus(unitDiff);
             }
-            coordToSet = coordAdd(coord, unitDiff);
-            while(inBounds(coordToSet)) {
+            coordToSet = coord.plus(unitDiff);
+            while(coordToSet.inBounds(this)) {
                 setThreatened(coordToSet);
-                coordToSet = coordAdd(coordToSet, unitDiff);
+                coordToSet = coordToSet.plus(unitDiff);
             }
         }
     }
 
-    public static Pair<Integer, Integer> simplifyFraction(
-            Pair<Integer, Integer> fraction) {
-        int gcd = coordGCD(fraction);
-        return Pair.of(fraction.getLeft() / gcd, fraction.getRight() / gcd);
+}
+
+class Coord {
+    public final int row, column;
+
+    public Coord(int row, int column) {
+        this.row = row;
+        this.column = column;
     }
 
-    public static Pair<Integer, Integer> coordSubtract(
-            Pair<Integer, Integer> a, Pair<Integer, Integer> b) {
-        return Pair.of(a.getLeft() - b.getLeft(), a.getRight() - b.getRight());
+    public Coord minus(Coord other) {
+        return new Coord(row - other.row, column - other.column);
     }
 
-    public static Pair<Integer, Integer> coordAdd(
-            Pair<Integer, Integer> a, Pair<Integer, Integer> b) {
-        return Pair.of(a.getLeft() + b.getLeft(), a.getRight() + b.getRight());
+    public Coord plus(Coord other) {
+        return new Coord(row + other.row, column + other.column);
     }
 
-    public static int coordGCD(Pair<Integer, Integer> coord) {
-        return BigInteger.valueOf(coord.getLeft())
-            .gcd(BigInteger.valueOf(coord.getRight())).intValue();
+    public boolean inBounds(Board board) {
+        return row >= 0 && column >= 0
+            && row < board.nQueens && column < board.nQueens;
     }
 
-    public boolean inBounds(Pair<Integer, Integer> coord) {
-        int row = coord.getLeft(), column = coord.getRight();
-        return row >= 0 && column >= 0 && row < nQueens && column < nQueens;
+    public int gcd() {
+        return BigInteger.valueOf(row)
+            .gcd(BigInteger.valueOf(column)).intValue();
+    }
+
+    public Coord simplifyAsFraction() {
+        int gcd = gcd();
+        return new Coord(row / gcd, column / gcd);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj != null && obj instanceof Coord) {
+            Coord other = (Coord) obj;
+            return row == other.row && column == other.column;
+        }
+        else return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return Pair.of(row, column).hashCode();
+    }
+}
+
+class BoardSet extends HashSet<Board> {
+    @Override
+    public boolean add(Board board) {
+        List<Board> permutations = board.permutations();
+        int minHashCode = permutations.get(0).hashCode();
+        int minHashIdx = 0;
+        for(int i = 1; i < permutations.size(); i++) {
+            int hashCode = permutations.get(i).hashCode();
+            if(hashCode < minHashCode) {
+                minHashCode = hashCode;
+                minHashIdx = i;
+            }
+        }
+        return super.add(permutations.get(minHashIdx));
     }
 }
