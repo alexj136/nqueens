@@ -82,6 +82,10 @@ class Board {
         return queenCoords.size();
     }
 
+    public boolean queenAt(Coord coord) {
+        return queenCoords.contains(coord);
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
