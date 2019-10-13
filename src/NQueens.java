@@ -48,11 +48,7 @@ public class NQueens {
      * (rotations or reflections) already.
      */
     public void explore(int row, BoardBuilder board) {
-        if(row >= nQueens) {
-            List<Board> perms = board.permutations();
-            perms.removeAll(solutions);
-            if(perms.size() == 8) solutions.add(board.board());
-        }
+        if(row >= nQueens) addSolution(board);
         else for(int column = 0; column < nQueens; column++) {
             if(!board.threatened(new Coord(row, column))) {
                 BoardBuilder daughter = board.clone();
@@ -60,6 +56,18 @@ public class NQueens {
                 explore(row + 1, daughter);
             }
         }
+    }
+
+    /* Add a solution to the set of solutions, if this solution, or a
+     * permutation of it, is not already in the set. We could in theory do this
+     * by overriding equals() and hashCode() for Board so that permutations are
+     * considered equal, but when trying this I kept running into a problem that
+     * HashSet was treating permutations as nonequal.
+     */
+    public void addSolution(BoardBuilder solution) {
+        List<Board> perms = solution.permutations();
+        perms.removeAll(solutions);
+        if(perms.size() == 8) solutions.add(solution.board());
     }
 }
 
